@@ -21,7 +21,7 @@ export default async function CreatorsPage({ searchParams }: { searchParams: Pro
   if (tab === "rising") rows = rows.filter((c) => c.players >= 300 && c.d24h != null).sort((a, b) => b.d24h! - a.d24h!);
   else if (tab === "islands") rows = [...rows].sort((a, b) => b.islands - a.islands);
   else rows = [...rows].sort((a, b) => b.players - a.players);
-  rows = rows.slice(0, 100);
+  rows = rows.slice(0, 60);
 
   // Up to three of each creator's islands for the thumbnail stack.
   const byCreator = new Map<string, { code: string; title: string }[]>();
@@ -45,7 +45,7 @@ export default async function CreatorsPage({ searchParams }: { searchParams: Pro
         <EmptyState title="No creator data yet" />
       ) : (
         <>
-          <div className="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-3 rounded-2xl bg-panel px-3 py-3 text-[13px] font-semibold text-muted sm:grid-cols-[2rem_minmax(0,1fr)_5rem_6rem_4.5rem_4.5rem]">
+          <div className="grid-creators rounded-2xl bg-panel px-3 py-3 text-[13px] font-semibold text-muted">
             <span />
             <span>Creator</span>
             <span className="hidden text-right sm:block">Islands</span>
@@ -57,7 +57,7 @@ export default async function CreatorsPage({ searchParams }: { searchParams: Pro
             <Link
               key={c.creator}
               href={`/creator/${encodeURIComponent(c.creator)}`}
-              className="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-3 border-b border-line px-3 py-2.5 transition hover:bg-panel/60 sm:grid-cols-[2rem_minmax(0,1fr)_5rem_6rem_4.5rem_4.5rem]"
+              className="grid-creators border-b border-line px-3 py-2.5 transition hover:bg-panel/60"
             >
               <span className={`text-center text-[14px] font-bold tnum ${i < 3 ? "text-[#ffb224]" : "text-muted"}`}>{i + 1}</span>
               <span className="flex min-w-0 items-center gap-3">

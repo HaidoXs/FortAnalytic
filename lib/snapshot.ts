@@ -12,6 +12,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import zlib from "node:zlib";
 import { reopenDb } from "./db";
+import { clearCache, warmCache } from "./queries";
 
 const CHECK_EVERY_MS = 10 * 60_000;
 let current = 0; // "at" of the snapshot in use
@@ -42,7 +43,10 @@ async function refresh(base: string) {
       fs.renameSync(tmp, target);
     });
     current = at;
-    console.log(`[snapshot] database updated (${new Date(at * 1000).toISOString()})`);
+    const t0 = Date.now();
+    clearCache();
+    warmCache();
+    console.log(`[snapshot] database updated (${new Date(at * 1000).toISOString()}), cache warmed in ${Date.now() - t0} ms`);
   } catch (e) {
     console.warn("[snapshot]", (e as Error).message);
   } finally {
@@ -52,7 +56,17 @@ async function refresh(base: string) {
 
 export async function startSnapshotSync() {
   const base = process.env.DB_SNAPSHOT_URL;
-  if (!base) return;
+  if (!base) {
+    // Local mode: the collector writes the database directly; just pre-compute.
+    setTimeout(() => {
+      try {
+        warmCache();
+      } catch {
+        /* empty database: nothing to warm */
+      }
+    }, 0);
+    return;
+  }
   const url = base.endsWith("/") ? base : `${base}/`;
   // Wait (up to a minute) for the first copy so the first visitor does not see an empty site.
   await Promise.race([refresh(url), new Promise((r) => setTimeout(r, 60_000))]);

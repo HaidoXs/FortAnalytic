@@ -89,3 +89,71 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Table grids, defined once instead of repeating long utility lists on every row. */
+.grid-islands,
+.grid-creators {
+  display: grid;
+  align-items: center;
+  gap: 0.75rem;
+  grid-template-columns: 2rem minmax(0, 1fr) 5.5rem 4.5rem;
+}
+@media (min-width: 640px) {
+  .grid-islands {
+    grid-template-columns: 2rem minmax(0, 1fr) 6rem 4.5rem 4.5rem 4.5rem;
+  }
+  .grid-creators {
+    grid-template-columns: 2rem minmax(0, 1fr) 5rem 6rem 4.5rem 4.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .grid-islands {
+    grid-template-columns: 2rem minmax(0, 1fr) 6rem 4.5rem 4.5rem 4.5rem 7rem 2rem;
+  }
+}
+
+/* Generated island thumbnail (components/IslandThumb.tsx): colours come in as CSS variables. */
+.thumb {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: var(--s);
+  height: var(--s);
+  border-radius: var(--r);
+  background:
+    radial-gradient(circle at var(--x) var(--y), rgba(255, 255, 255, 0.25) 0, transparent 55%),
+    linear-gradient(var(--d), var(--a), var(--b));
+  color: #fff;
+  font-weight: 800;
+  font-size: calc(var(--s) * 0.36);
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+.thumb.emoji {
+  font-size: calc(var(--s) * 0.5);
+}
+.thumb > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ▲ / ▼ before a percentage (components/Delta.tsx). */
+.tri::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 6px;
+  margin-right: 3px;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.tri.dn::before {
+  transform: rotate(180deg);
+}

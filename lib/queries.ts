@@ -5,23 +5,50 @@ const HOUR = 3600;
 const DAY = 86400;
 
 // ---------------------------------------------------------------------------
-// Small per-process memo: pages re-run these on every request, the data only
-// moves once an hour.
+// Per-process memo. Island data only moves when the collector finishes a run (or a new
+// snapshot is loaded), so entries live until then instead of expiring every minute:
+// on a small CPU (Render free) recomputing them was what made pages slow.
 const memo = new Map<string, { at: number; v: unknown }>();
+let generation = 0;
+
+function dataVersion() {
+  return `${generation}:${getMeta("job.islands") ?? ""}:${getMeta("job.catalog") ?? ""}`;
+}
+
 function cached<T>(key: string, ttlMs: number, fn: () => T): T {
-  const hit = memo.get(key);
+  const k = `${dataVersion()}|${key}`;
+  const hit = memo.get(k);
   if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
   const v = fn();
-  memo.set(key, { at: Date.now(), v });
+  if (memo.size > 200) memo.clear(); // old versions pile up otherwise
+  memo.set(k, { at: Date.now(), v });
   return v;
 }
+
+/** Drop every cached result (after the database file was replaced). */
+export function clearCache() {
+  generation++;
+  memo.clear();
+}
+
+/** Compute the expensive shared results ahead of the first visitor. */
+export function warmCache() {
+  trackedIslands();
+  genreStats();
+  tagStats();
+  creatorStats();
+  milestones();
+  trends();
+}
+
+const LONG = 2 * 3600_000;
 
 // ---------------------------------------------------------------------------
 // Reference points in time
 
 /** Latest hourly bucket that most tracked islands have reported (the newest one is often still partial). */
 export function refHour(): number | null {
-  return cached("refHour", 30_000, () => {
+  return cached("refHour", 5 * 60_000, () => {
     const rows = getDb()
       .prepare(
         `SELECT ts, COUNT(ccu) n FROM island_hourly
@@ -83,7 +110,7 @@ export function trackedIslands(): IslandRow[] {
   const H = refHour();
   const D = refDay();
   if (H == null) return [];
-  return cached(`tracked:${H}:${D}`, 60_000, () => {
+  return cached(`tracked:${H}:${D}`, LONG, () => {
     const rows = getDb()
       .prepare(
         `SELECT t.code, i.title, i.creator, i.created_in createdIn, i.tags, i.list_pos listPos,
@@ -305,7 +332,7 @@ export interface GenreRow {
 export function genreStats(): GenreRow[] {
   const H = refHour();
   if (H == null) return [];
-  return cached(`genres:${H}`, 60_000, () => {
+  return cached(`genres:${H}`, LONG, () => {
     const db = getDb();
     const genres = db.prepare("SELECT slug, name, total FROM genres").all() as { slug: string; name: string; total: number | null }[];
     const all = trackedIslands();
@@ -342,7 +369,7 @@ export interface TagRow {
 export function tagStats(): TagRow[] {
   const H = refHour();
   if (H == null) return [];
-  return cached(`tags:${H}`, 60_000, () => {
+  return cached(`tags:${H}`, LONG, () => {
     const acc = new Map<string, { now: number; before: number; n: number; genres: Map<string, number>; best: IslandRow }>();
     for (const r of trackedIslands()) {
       for (const tag of r.tags) {
@@ -408,7 +435,7 @@ const TREND_BUCKETS = 12;
 export function trends(): TrendRow[] {
   const catalogAt = getMeta("job.catalog") ?? "0";
   const H = refHour() ?? 0;
-  return cached(`trends:${catalogAt}:${H}`, 5 * 60_000, () => {
+  return cached(`trends:${catalogAt}:${H}`, LONG, () => {
     const db = getDb();
     const W = TREND_WINDOW;
     const rows = db
@@ -468,7 +495,7 @@ export interface CreatorRow {
 export function creatorStats(): CreatorRow[] {
   const H = refHour() ?? 0;
   const catalogAt = getMeta("job.catalog") ?? "0";
-  return cached(`creators:${H}:${catalogAt}`, 60_000, () => {
+  return cached(`creators:${H}:${catalogAt}`, LONG, () => {
     const counts = new Map(
       (getDb().prepare("SELECT creator, COUNT(*) n FROM islands WHERE creator IS NOT NULL GROUP BY creator").all() as { creator: string; n: number }[]).map(
         (r) => [r.creator, r.n],
@@ -556,7 +583,7 @@ const THRESHOLDS = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000];
 export function milestones(limit = 6): Milestone[] {
   const H = refHour();
   if (H == null) return [];
-  return cached(`milestones:${H}`, 60_000, () => {
+  return cached(`milestones:${H}`, LONG, () => {
     const db = getDb();
     const out: Milestone[] = [];
     const meta = new Map(trackedIslands().map((r) => [r.code, r]));

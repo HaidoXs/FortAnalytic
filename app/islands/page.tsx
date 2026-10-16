@@ -25,7 +25,7 @@ const TABS: { key: IslandSort; label: string }[] = [
 export default async function IslandsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   const tab = (TABS.find((t) => t.key === sp.tab)?.key ?? "most") as IslandSort;
-  const limit = Math.min(500, Number(sp.limit) || 100);
+  const limit = Math.min(500, Number(sp.limit) || 50);
   const rows = islandList(tab, { genre: sp.genre, tag: sp.tag, q: sp.q, limit: limit + 1 });
   const shown = rows.slice(0, limit);
   const spark = sparklines(shown.map((r) => r.code));
@@ -87,7 +87,7 @@ export default async function IslandsPage({ searchParams }: { searchParams: Prom
 
       {rows.length > limit && (
         <div className="mt-5 flex justify-center">
-          <Link href={href({ limit: String(limit + 100) })} scroll={false} className="rounded-full border border-line bg-panel px-5 py-2 text-[14px] font-semibold hover:bg-panel-3">
+          <Link href={href({ limit: String(limit + 50) })} scroll={false} className="rounded-full border border-line bg-panel px-5 py-2 text-[14px] font-semibold hover:bg-panel-3">
             Show more
           </Link>
         </div>

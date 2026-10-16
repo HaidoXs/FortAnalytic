@@ -9,7 +9,7 @@ import { StarButton } from "./Watchlist";
 export function IslandTable({ rows, spark, offset = 0, extra }: { rows: IslandRow[]; spark: Record<string, number[]>; offset?: number; extra?: { label: string; value: (r: IslandRow) => React.ReactNode } }) {
   return (
     <div className="overflow-hidden">
-      <div className="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-3 rounded-2xl bg-panel px-3 py-3 text-[13px] font-semibold text-muted sm:grid-cols-[2rem_minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem] lg:grid-cols-[2rem_minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem_7rem_2rem]">
+      <div className="grid-islands rounded-2xl bg-panel px-3 py-3 text-[13px] font-semibold text-muted">
         <span className="text-center">#</span>
         <span>Island</span>
         <span className="text-right">↓ Players</span>
@@ -23,7 +23,7 @@ export function IslandTable({ rows, spark, offset = 0, extra }: { rows: IslandRo
         {rows.map((r, i) => (
           <li
             key={r.code}
-            className="grid grid-cols-[2rem_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-3 border-b border-line px-3 py-2.5 transition hover:bg-panel/60 sm:grid-cols-[2rem_minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem] lg:grid-cols-[2rem_minmax(0,1fr)_6rem_4.5rem_4.5rem_4.5rem_7rem_2rem]"
+            className="grid-islands border-b border-line px-3 py-2.5 transition hover:bg-panel/60"
           >
             <span className={`text-center text-[14px] font-bold tnum ${offset + i < 3 ? "text-[#ffb224]" : "text-muted"}`}>{offset + i + 1}</span>
             <Link href={`/island/${r.code}`} className="flex min-w-0 items-center gap-3">

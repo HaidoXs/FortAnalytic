@@ -4,15 +4,13 @@ import { fmtPct } from "@/lib/format";
 export function Delta({ value, pill = false, className = "" }: { value: number | null | undefined; pill?: boolean; className?: string }) {
   if (value == null || !Number.isFinite(value)) return <span className={`text-muted tnum ${className}`}>–</span>;
   const up = value >= 0;
+  // The ▲/▼ is drawn by the .tri class (globals.css): this renders hundreds of times per page.
   return (
     <span
-      className={`inline-flex items-center gap-[3px] font-semibold tnum whitespace-nowrap ${up ? "text-up" : "text-down"} ${
-        pill ? `rounded-md px-1.5 py-0.5 ${up ? "bg-up-soft" : "bg-down-soft"}` : ""
+      className={`tri inline-flex items-center font-semibold tnum whitespace-nowrap ${up ? "text-up" : "dn text-down"}${
+        pill ? ` rounded-md px-1.5 py-0.5 ${up ? "bg-up-soft" : "bg-down-soft"}` : ""
       } ${className}`}
     >
-      <svg width="7" height="6" viewBox="0 0 7 6" aria-hidden className={up ? "" : "rotate-180"}>
-        <path d="M3.5 0 7 6H0z" fill="currentColor" />
-      </svg>
       <span className="sr-only">{up ? "up" : "down"}</span>
       {fmtPct(Math.abs(value))}
     </span>

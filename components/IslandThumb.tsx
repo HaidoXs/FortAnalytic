@@ -41,29 +41,24 @@ export function IslandThumb({ code, title, size = 36, rounded = 10 }: { code: st
   const [a, b] = PALETTES[h % PALETTES.length];
   const angle = (h >> 4) % 360;
   const g = glyph(title);
+  // Styling lives in the .thumb class (globals.css); only the per-island values go inline,
+  // which keeps pages listing hundreds of thumbnails small.
+  const vars = {
+    "--s": `${size}px`,
+    "--r": `${rounded}px`,
+    "--a": a,
+    "--b": b,
+    "--d": `${angle}deg`,
+    "--x": `${20 + (h % 60)}%`,
+    "--y": `${15 + ((h >> 8) % 50)}%`,
+  } as React.CSSProperties;
   return (
-    <span
-      className="relative inline-flex shrink-0 items-center justify-center overflow-hidden font-extrabold text-white select-none"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: rounded,
-        background: `linear-gradient(${angle}deg, ${a}, ${b})`,
-        fontSize: g.emoji ? size * 0.5 : size * 0.36,
-        letterSpacing: "-0.02em",
-        textShadow: "0 1px 2px rgba(0,0,0,.35)",
-      }}
-      aria-hidden
-    >
-      <span
-        className="absolute inset-0 opacity-25"
-        style={{ background: `radial-gradient(circle at ${20 + (h % 60)}% ${15 + ((h >> 8) % 50)}%, #fff 0, transparent 55%)` }}
-      />
-      <span className="relative">{g.text}</span>
+    <span className={g.emoji ? "thumb emoji" : "thumb"} style={vars} aria-hidden>
+      {g.text}
       {SHOW_IMAGES && (
         // Real cover art on top when we have it; /api/thumb answers a transparent pixel otherwise.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/api/thumb/${code}`} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
+        <img src={`/api/thumb/${code}`} alt="" loading="lazy" decoding="async" />
       )}
     </span>
   );
