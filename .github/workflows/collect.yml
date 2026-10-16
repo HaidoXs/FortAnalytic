@@ -3,23 +3,40 @@
 #
 # Minutes are unlimited for public repositories. A private repository's free
 # quota (2,000 min/month) is not enough for hourly runs of ~6 minutes.
+#
+# GitHub turns scheduled workflows off after 60 days without activity in a public
+# repository. The weekly "keepalive" job re-enables this workflow through the API,
+# which resets that timer, so collection goes on even if nobody pushes for months.
 
 name: Collect data
 
 on:
   schedule:
     - cron: "7 * * * *" # a few minutes past the hour, once Epic has published the new bucket
+    - cron: "41 4 * * 1" # keepalive, Mondays
   workflow_dispatch:
 
 permissions:
   contents: write # create / update the "db" release
-
-concurrency:
-  group: collect
-  cancel-in-progress: false
+  actions: write # keepalive: re-enable this workflow
 
 jobs:
+  keepalive:
+    if: github.event.schedule == '41 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Keep the schedule alive
+        run: gh api --method PUT "repos/${{ github.repository }}/actions/workflows/collect.yml/enable"
+
   collect:
+    if: github.event.schedule != '41 4 * * 1'
+    # One collection at a time (job level, so a pending keepalive run is never cancelled by it).
+    concurrency:
+      group: collect
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
