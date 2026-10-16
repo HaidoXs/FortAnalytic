@@ -9,6 +9,7 @@ import { IslandThumb } from "@/components/IslandThumb";
 import { StarButton } from "@/components/Watchlist";
 import { getDb } from "@/lib/db";
 import { change, fmtCompact, fmtInt, fmtMinutes, LOCALE } from "@/lib/format";
+import { ensureImage } from "@/lib/images";
 import { ensureIsland } from "@/lib/ingest";
 import { islandDetail } from "@/lib/queries";
 
@@ -36,6 +37,7 @@ export default async function IslandPage({ params }: Props) {
   const { code } = await params;
   if (!/^\d{4}-\d{4}-\d{4}$/.test(code)) notFound();
   if (!(await ensureIsland(code))) notFound();
+  await ensureImage(code);
   const d = islandDetail(code);
   if (!d) notFound();
 

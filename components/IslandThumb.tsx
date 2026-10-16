@@ -1,5 +1,8 @@
 // Epic's public API has no island images, so every island gets generated cover art:
 // a gradient seeded by its code, with the title's emoji or initials on top.
+// With NEXT_PUBLIC_ISLAND_IMAGES set (see lib/images.ts) the real image covers it when known.
+
+const SHOW_IMAGES = process.env.NEXT_PUBLIC_ISLAND_IMAGES === "fortnitegg";
 
 const PALETTES = [
   ["#ff7a18", "#af002d"],
@@ -57,6 +60,11 @@ export function IslandThumb({ code, title, size = 36, rounded = 10 }: { code: st
         style={{ background: `radial-gradient(circle at ${20 + (h % 60)}% ${15 + ((h >> 8) % 50)}%, #fff 0, transparent 55%)` }}
       />
       <span className="relative">{g.text}</span>
+      {SHOW_IMAGES && (
+        // Real cover art on top when we have it; /api/thumb answers a transparent pixel otherwise.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/api/thumb/${code}`} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover" />
+      )}
     </span>
   );
 }

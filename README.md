@@ -34,4 +34,4 @@ npm run collect:watch
 - Epic keeps 7 days of history; longer ranges (1M, 3M, 1Y) fill in as the collector keeps running.
 - Island "players" = peak concurrent players of the last complete hour. Values under 5 players are hidden by Epic.
 - Creator codes do not tell solo developers and studios apart, so there is one Creators list.
-- No island images in the API: thumbnails are generated from the code and title.
+- No island images in the API: thumbnails are generated from the code and title. Real images can come from fortnite.gg once they agree: the integration is coded but off (`NEXT_PUBLIC_ISLAND_IMAGES`, see `.env.example`, `lib/images.ts` and `docs/fortnite-gg-request.md`).

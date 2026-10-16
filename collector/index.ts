@@ -7,9 +7,11 @@
 //   rankings every hour    genre leaderboards -> which islands we track
 //   islands  every hour    hourly metrics of every tracked island (daily metrics once a day)
 //   catalog  every day     full island catalog (~285k islands, title / creator / tags)
+//   images   every hour    cover art of tracked islands, only when enabled (lib/images.ts)
 
 import { getDb, getMeta, setMeta } from "../lib/db";
 import { fnApi } from "../lib/fortnite-api";
+import { ImageSourceBlocked, imagesEnabled, lookupImage, storeImage } from "../lib/images";
 import { nowSec, oldestAllowed, storeEco, syncIsland, upsertIslands } from "../lib/ingest";
 
 const TOP_PER_GENRE = Number(process.env.TOP_PER_GENRE ?? 100);
@@ -106,6 +108,37 @@ async function jobIslands() {
   log(`islands: ${ok} synced, ${failed} failed${daily ? " (with daily metrics)" : ""}`);
 }
 
+const IMAGES_PER_RUN = Number(process.env.IMAGES_PER_RUN ?? 400);
+
+async function jobImages() {
+  if (!imagesEnabled) return; // see lib/images.ts: off until fortnite.gg agrees
+  const db = getDb();
+  // Never-checked tracked islands first, then the oldest checks (images rarely change: weekly).
+  const codes = (
+    db
+      .prepare(
+        `SELECT i.code FROM tracked t JOIN islands i ON i.code = t.code
+         WHERE i.image_checked IS NULL OR i.image_checked < ?
+         ORDER BY i.image_checked IS NOT NULL, i.image_checked, COALESCE(t.genre_rank, 9999) LIMIT ?`,
+      )
+      .all(nowSec() - 7 * DAY, IMAGES_PER_RUN) as { code: string }[]
+  ).map((r) => r.code);
+  let found = 0;
+  let done = 0;
+  for (const code of codes) {
+    try {
+      const img = await lookupImage(code);
+      storeImage(code, img);
+      done++;
+      if (img) found++;
+    } catch (e) {
+      log("  images stopped:", (e as Error).message);
+      if (e instanceof ImageSourceBlocked) break;
+    }
+  }
+  log(`images: ${found} found, ${done}/${codes.length} checked`);
+}
+
 async function jobCatalog() {
   let after: string | null = null;
   let pos = 0;
@@ -126,6 +159,7 @@ const JOBS = [
   { name: "catalog", every: DAY, run: jobCatalog },
   { name: "rankings", every: HOUR, run: jobRankings },
   { name: "islands", every: HOUR, run: jobIslands },
+  { name: "images", every: HOUR, run: jobImages },
 ] as const;
 
 async function runDue() {

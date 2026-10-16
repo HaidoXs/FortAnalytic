@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getDb, getMeta } from "@/lib/db";
 import { fmtInt, timeAgo } from "@/lib/format";
+import { imagesEnabled } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "About the data" };
@@ -42,7 +43,19 @@ export default function AboutPage() {
         <li>&ldquo;Players&rdquo; on an island is the peak concurrent players of the last complete hour, not a live count.</li>
         <li>Epic hides values under 5 players; those hours count as 0.</li>
         <li>Creators are Support-a-Creator codes: Fortnite does not say whether one is a solo developer or a studio.</li>
-        <li>The API has no island images, so thumbnails are generated from the island code and title.</li>
+        <li>
+          {imagesEnabled ? (
+            <>
+              Island images come from Epic&apos;s CDN, found through{" "}
+              <a className="font-semibold text-accent" href="https://fortnite.gg" target="_blank" rel="noreferrer">
+                fortnite.gg
+              </a>{" "}
+              with their permission. Islands without one get a generated thumbnail.
+            </>
+          ) : (
+            "The API has no island images, so thumbnails are generated from the island code and title."
+          )}
+        </li>
         <li>Release dates are not published; &ldquo;new&rdquo; means most recent in Epic&apos;s release-ordered catalog.</li>
       </ul>
       <h2 className="pt-2 text-[18px] font-bold text-text">Collector status</h2>

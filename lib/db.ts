@@ -91,7 +91,15 @@ export function getDb(): Database.Database {
   db.pragma("synchronous = NORMAL");
   db.pragma("busy_timeout = 5000");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+function migrate(d: Database.Database) {
+  const cols = new Set((d.prepare("PRAGMA table_info(islands)").all() as { name: string }[]).map((c) => c.name));
+  // Island cover art (Epic CDN URL) and when we last looked it up.
+  if (!cols.has("image")) d.exec("ALTER TABLE islands ADD COLUMN image TEXT");
+  if (!cols.has("image_checked")) d.exec("ALTER TABLE islands ADD COLUMN image_checked INTEGER");
 }
 
 export function getMeta(key: string): string | null {
