@@ -1,6 +1,7 @@
 // Collector: pulls Epic's Fortnite Data API into data/fortanalytic.db.
 //   tsx collector/index.ts once    run every job that is due, then exit
 //   tsx collector/index.ts watch   keep running, checking every minute
+//   tsx collector/index.ts snapshot out.db   compact copy of the database
 //
 // Jobs and cadence:
 //   eco      every 10 min  Fortnite-wide concurrent players (in client / in match)
@@ -22,9 +23,11 @@ const DAY = 86400;
 const log = (...a: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 async function jobEco() {
-  const first = !getMeta("eco.done");
+  const last = Number(getMeta("eco.done") ?? 0);
+  const first = !last;
   const from = first ? oldestAllowed() : undefined;
-  storeEco("minute", await fnApi.eco("minute", first ? nowSec() - DAY : undefined));
+  // 10-minute buckets since the previous run (runs can be an hour or more apart in CI).
+  storeEco("minute", await fnApi.eco("minute", first ? nowSec() - DAY : Math.max(nowSec() - DAY, last - 20 * 60)));
   storeEco("hour", await fnApi.eco("hour", from ?? nowSec() - 2 * DAY));
   storeEco("day", await fnApi.eco("day", from ?? nowSec() - 3 * DAY));
   setMeta("eco.done", nowSec());
@@ -162,11 +165,12 @@ const JOBS = [
   { name: "images", every: HOUR, run: jobImages },
 ] as const;
 
-async function runDue() {
+/** `slack`: run a job a bit early. Scheduled CI runs drift by several minutes, an hourly job must not skip a run because of it. */
+async function runDue(slack = false) {
   for (const job of JOBS) {
     const last = Number(getMeta(`job.${job.name}`) ?? 0);
-    // Hourly jobs wait until a few minutes past the hour, when Epic has published the new bucket.
-    const due = nowSec() - last >= job.every - 60;
+    const early = slack ? Math.min(job.every * 0.25, 15 * 60) : 60;
+    const due = nowSec() - last >= job.every - early;
     if (!due) continue;
     const t0 = Date.now();
     log(`> ${job.name}`);
@@ -188,6 +192,11 @@ if (mode === "watch") {
     await runDue();
     await new Promise((r) => setTimeout(r, 60_000));
   }
+} else if (mode === "snapshot") {
+  // Compact copy of the database for publishing (used by .github/workflows/collect.yml).
+  const out = process.argv[3] ?? "snapshot.db";
+  getDb().exec(`VACUUM INTO '${out.replace(/'/g, "''")}'`);
+  log(`snapshot written to ${out}`);
 } else {
-  await runDue();
+  await runDue(true);
 }

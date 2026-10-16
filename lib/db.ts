@@ -102,6 +102,13 @@ function migrate(d: Database.Database) {
   if (!cols.has("image_checked")) d.exec("ALTER TABLE islands ADD COLUMN image_checked INTEGER");
 }
 
+/** Close the connection, run `swap` (e.g. replace the file), and reopen on next use. */
+export function reopenDb(swap: () => void) {
+  db?.close();
+  db = null;
+  swap();
+}
+
 export function getMeta(key: string): string | null {
   const row = getDb().prepare("SELECT value FROM meta WHERE key = ?").get(key) as { value: string } | undefined;
   return row?.value ?? null;

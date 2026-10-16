@@ -1,0 +1,17 @@
+# Render Blueprint: the website only. Data comes from the "db" release that the
+# GitHub Actions workflow (.github/workflows/collect.yml) refreshes every hour.
+services:
+  - type: web
+    name: fortanalytic
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /about
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DB_SNAPSHOT_URL
+        value: https://github.com/HaidoXs/FortAnalytic/releases/download/db/
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"

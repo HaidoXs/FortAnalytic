@@ -16,6 +16,13 @@ Keep the data flowing with the collector in watch mode (or both at once with `np
 npm run collect:watch
 ```
 
+## Free hosting (GitHub Actions + Render)
+
+1. **Collector**: `.github/workflows/collect.yml` runs every hour on GitHub Actions and publishes the database (gzipped) to the `db` release of this repository. The repository must be **public** (unlimited Actions minutes, and release files downloadable without a token). Run it once by hand from the Actions tab to fill the first database (~15 min).
+2. **Website**: `render.yaml` is a Render Blueprint (free web service). On start, and every 10 minutes, the site downloads the latest database from `DB_SNAPSHOT_URL` (`lib/snapshot.ts`).
+
+Limits of this setup: data is refreshed hourly; islands opened on the site but outside the genre top lists are fetched live but not kept between snapshots; a free Render service sleeps when idle (first visit after a pause takes ~1 min).
+
 ## How it works
 
 - **Data source**: Epic's public [Fortnite Data API](https://api.fortnite.com/ecosystem/v1/docs). No key needed, but it rate-limits bursts, so every call goes through one pacer (~4 req/s, `FN_API_GAP_MS`) with retries on 429.

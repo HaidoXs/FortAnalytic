@@ -1,0 +1,57 @@
+# Runs the collector every hour and publishes the database as an asset of the
+# "db" release. The site (Render) downloads that file: see lib/snapshot.ts.
+#
+# Minutes are unlimited for public repositories. A private repository's free
+# quota (2,000 min/month) is not enough for hourly runs of ~6 minutes.
+
+name: Collect data
+
+on:
+  schedule:
+    - cron: "7 * * * *" # a few minutes past the hour, once Epic has published the new bucket
+  workflow_dispatch:
+
+permissions:
+  contents: write # create / update the "db" release
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FORTANALYTIC_DB: data/fortanalytic.db
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download the latest database
+        run: |
+          mkdir -p data
+          if gh release download db --pattern fortanalytic.db.gz --dir data; then
+            gunzip -f data/fortanalytic.db.gz
+          else
+            echo "No published database yet: the first run fills it from scratch (~15 min)."
+          fi
+
+      - name: Collect
+        run: npm run collect
+
+      - name: Publish the database
+        run: |
+          npx tsx collector/index.ts snapshot data/snapshot.db
+          gzip -c data/snapshot.db > data/fortanalytic.db.gz
+          echo "{\"at\": $(date +%s)}" > data/snapshot.json
+          gh release view db > /dev/null 2>&1 || gh release create db --latest=false --title "Database snapshot" \
+            --notes "Latest FortAnalytic database, replaced every hour by the Collect data workflow."
+          gh release upload db data/fortanalytic.db.gz data/snapshot.json --clobber

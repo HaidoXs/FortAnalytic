@@ -6,3 +6,4 @@ data/*.db
 data/*.db-*
 data/*.log
 .env*.local
+data/*.download
